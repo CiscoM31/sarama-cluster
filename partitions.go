@@ -31,6 +31,12 @@ type PartitionConsumer interface {
 
 	// Partition returns the consumed partition
 	Partition() int32
+
+	// MarkOffset marks the offset of a message as preocessed.
+	MarkOffset(offset int64, metadata string)
+
+	// ResetOffset resets the offset to a previously processed message.
+	ResetOffset(offset int64, metadata string)
 }
 
 type partitionConsumer struct {
@@ -76,7 +82,7 @@ func (c *partitionConsumer) Topic() string { return c.topic }
 // Partition implements PartitionConsumer
 func (c *partitionConsumer) Partition() int32 { return c.partition }
 
-func (c *partitionConsumer) WaitFor(stopper <-chan none, errors chan<- error) {
+func (c *partitionConsumer) waitFor(stopper <-chan none, errors chan<- error) {
 	defer close(c.dead)
 
 	for {
@@ -100,7 +106,7 @@ func (c *partitionConsumer) WaitFor(stopper <-chan none, errors chan<- error) {
 	}
 }
 
-func (c *partitionConsumer) Multiplex(stopper <-chan none, messages chan<- *sarama.ConsumerMessage, errors chan<- error) {
+func (c *partitionConsumer) multiplex(stopper <-chan none, messages chan<- *sarama.ConsumerMessage, errors chan<- error) {
 	defer close(c.dead)
 
 	for {
@@ -144,7 +150,7 @@ func (c *partitionConsumer) Close() (err error) {
 	return err
 }
 
-func (c *partitionConsumer) State() partitionState {
+func (c *partitionConsumer) getState() partitionState {
 	if c == nil {
 		return partitionState{}
 	}
@@ -156,7 +162,7 @@ func (c *partitionConsumer) State() partitionState {
 	return state
 }
 
-func (c *partitionConsumer) MarkCommitted(offset int64) {
+func (c *partitionConsumer) markCommitted(offset int64) {
 	if c == nil {
 		return
 	}
@@ -168,28 +174,30 @@ func (c *partitionConsumer) MarkCommitted(offset int64) {
 	c.mu.Unlock()
 }
 
+// MarkOffset implements PartitionConsumer
 func (c *partitionConsumer) MarkOffset(offset int64, metadata string) {
 	if c == nil {
 		return
 	}
 
 	c.mu.Lock()
-	if offset > c.state.Info.Offset {
-		c.state.Info.Offset = offset
+	if next := offset + 1; next > c.state.Info.Offset {
+		c.state.Info.Offset = next
 		c.state.Info.Metadata = metadata
 		c.state.Dirty = true
 	}
 	c.mu.Unlock()
 }
 
+// ResetOffset implements PartitionConsumer
 func (c *partitionConsumer) ResetOffset(offset int64, metadata string) {
 	if c == nil {
 		return
 	}
 
 	c.mu.Lock()
-	if offset <= c.state.Info.Offset {
-		c.state.Info.Offset = offset
+	if next := offset + 1; next <= c.state.Info.Offset {
+		c.state.Info.Offset = next
 		c.state.Info.Metadata = metadata
 		c.state.Dirty = true
 	}
@@ -248,7 +256,7 @@ func (m *partitionMap) Snapshot() map[topicPartition]partitionState {
 
 	snap := make(map[topicPartition]partitionState, len(m.data))
 	for tp, pc := range m.data {
-		snap[tp] = pc.State()
+		snap[tp] = pc.getState()
 	}
 	return snap
 }
