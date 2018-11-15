@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/CiscoM31/sarama"
+	"github.com/Shopify/sarama"
 )
 
 // PartitionConsumer allows code to consume individual partitions from the cluster.

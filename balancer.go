@@ -5,7 +5,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/CiscoM31/sarama"
+	"github.com/Shopify/sarama"
 )
 
 // NotificationType defines the type of notification

@@ -3,7 +3,7 @@ package cluster
 import (
 	"sync"
 
-	"github.com/CiscoM31/sarama"
+	"github.com/Shopify/sarama"
 )
 
 // OffsetStash allows to accumulate offsets and
