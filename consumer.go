@@ -449,7 +449,11 @@ func (c *Consumer) twLoop(stopped <-chan none) {
 
 // commit loop, triggered by the mainLoop
 func (c *Consumer) cmLoop(stopped <-chan none) {
-	ticker := time.NewTicker(c.client.config.Consumer.Offsets.CommitInterval)
+	iVal := c.client.config.Consumer.Offsets.CommitInterval
+	if iVal <= 0 {
+		iVal = 1 * time.Second
+	}
+	ticker := time.NewTicker(iVal)
 	defer ticker.Stop()
 
 	for {
