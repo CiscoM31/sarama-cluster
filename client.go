@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"github.com/CiscoM31/sarama"
+	"github.com/Shopify/sarama"
 )
 
 var errClientInUse = errors.New("cluster: client is already used by another consumer")
